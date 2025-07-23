@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Project Zer0 - Download & Sign In</title>
+  <style>
+    body { background: #181a20; color: #fff; font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 0; }
+    .container { max-width: 500px; margin: 4rem auto; background: #23242b; border-radius: 1.5rem; box-shadow: 0 4px 24px #0006; padding: 2rem; }
+    h1 { color: #00ff99; }
+    .btn { background: #23242b; color: #fff; border: none; border-radius: 1rem; padding: 0.7rem 1.5rem; font-size: 1.1rem; cursor: pointer; margin-top: 1rem; box-shadow: 0 2px 8px #0003; transition: background 0.2s; }
+    .btn:hover { background: #35363f; }
+    .info { color: #aaa; margin-top: 1.5rem; }
+    .success { color: #00ff99; }
+    .error { color: #ff4d4f; }
+    .loading { color: #ffaa00; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Project Zer0</h1>
+    <div id="status" class="info">Checking for sign-in link...</div>
+    <div id="download" style="display:none;">
+      <a href="../electron-ui/installer.exe" class="btn">Download the App</a>
+      <div class="info">If you haven't installed the app yet, download and install it, then click the sign-in link again.</div>
+    </div>
+  </div>
+
+  <!-- Firebase SDK -->
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+    import { getAuth, isSignInWithEmailLink, signInWithEmailLink } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+    import { getFirestore, doc, updateDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBgoYtchnONrek50_kJcNlVsN0OPJIBdNo",
+      authDomain: "project-zer0-5827a.firebaseapp.com",
+      projectId: "project-zer0-5827a",
+      storageBucket: "project-zer0-5827a.appspot.com",
+      messagingSenderId: "732821132862",
+      appId: "1:732821132862:web:cbdf51dc9fe8a28099236f"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    async function handleEmailLink() {
+      const statusDiv = document.getElementById('status');
+      const downloadDiv = document.getElementById('download');
+
+      try {
+        // Check if this is an email sign-in link
+        if (isSignInWithEmailLink(auth, window.location.href)) {
+          statusDiv.innerHTML = '<span class="loading">Processing email verification...</span>';
+          
+          // Get the email from localStorage
+          let email = window.localStorage.getItem('emailForSignIn');
+          if (!email) {
+            // If email is not in localStorage, prompt user
+            email = window.prompt('Please provide your email for confirmation');
+          }
+
+          if (email) {
+            // Complete the sign-in process
+            const result = await signInWithEmailLink(auth, email, window.location.href);
+            
+            // Clear the email from localStorage
+            window.localStorage.removeItem('emailForSignIn');
+            
+            // Update Firestore to activate the account
+            const userDoc = doc(db, 'users', result.user.uid);
+            await updateDoc(userDoc, { 
+              activated: true,
+              lastActivated: new Date(),
+              online: true
+            });
+
+            statusDiv.innerHTML = '<span class="success">✅ Account activated successfully!</span>';
+            statusDiv.className = 'success';
+            
+            // Try to open the Electron app
+            setTimeout(() => {
+              const zer0Url = 'zer0://auth?mode=activated&uid=' + result.user.uid;
+              window.location.href = zer0Url;
+              
+              // Show download option if app doesn't open
+              setTimeout(() => {
+                downloadDiv.style.display = 'block';
+                statusDiv.innerHTML = '<span class="success">✅ Account activated! If the app didn\'t open, download it below.</span>';
+              }, 2000);
+            }, 1000);
+
+          } else {
+            statusDiv.innerHTML = '<span class="error">❌ Email not provided. Please try the sign-in link again.</span>';
+            statusDiv.className = 'error';
+            downloadDiv.style.display = 'block';
+          }
+        } else {
+          // Not an email link, show download page
+          statusDiv.innerHTML = 'Welcome! Download the app below.';
+          downloadDiv.style.display = 'block';
+        }
+      } catch (error) {
+        console.error('Error processing email link:', error);
+        statusDiv.innerHTML = `<span class="error">❌ Error: ${error.message}</span>`;
+        statusDiv.className = 'error';
+        downloadDiv.style.display = 'block';
+      }
+    }
+
+    // Handle the email link when page loads
+    window.onload = handleEmailLink;
+  </script>
+</body>
+</html> 
