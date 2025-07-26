@@ -102,29 +102,6 @@
       return urlParams.get(param);
     }
 
-    async function fetchUserData(userId) {
-      const userDocRef = doc(db, 'users', userId);
-      const userDocSnap = await getDoc(userDocRef);
-      if (userDocSnap.exists()) {
-        return userDocSnap.data();
-      }
-      return null;
-    }
-
-    async function createUserData(userId, username) {
-      const userDocRef = doc(db, 'users', userId);
-      await setDoc(userDocRef, {
-        discordId: userId,
-        nickname: username,
-        referralCode: generateReferralCode(),
-        referralActivated: false,
-        referrals: 0,
-        createdAt: new Date(),
-        online: true,
-        lastSeen: new Date()
-      });
-    }
-
     function generateReferralCode() {
       return Math.random().toString(36).substring(2, 8).toUpperCase();
     }
@@ -172,7 +149,6 @@
       try {
         // Exchange code for access token via backend API
         const response = await fetch(`/.netlify/functions/discord-oauth?code=${code}`);
-        console.log(response)
         if (!response.ok) {
           throw new Error('Failed to exchange code for token');
         }
@@ -182,12 +158,25 @@
           throw new Error('Failed to get user info from Discord');
         }
 
-        // Check Firestore for user
-        let userData = await fetchUserData(userInfo.id);
-        if (!userData) {
-          await createUserData(userInfo.id, userInfo.username);
-          userData = await fetchUserData(userInfo.id);
+        // Check Firestore for user document with user ID as document ID
+        const userDocRef = doc(db, 'users', userInfo.id);
+        let userDocSnap = await getDoc(userDocRef);
+        let userData;
+        if (!userDocSnap.exists()) {
+          // Create new user document with user ID as document ID
+          await setDoc(userDocRef, {
+            discordId: userInfo.id,
+            nickname: userInfo.username,
+            referralCode: generateReferralCode(),
+            referralActivated: false,
+            referrals: 0,
+            createdAt: new Date(),
+            online: true,
+            lastSeen: new Date()
+          });
+          userDocSnap = await getDoc(userDocRef);
         }
+        userData = userDocSnap.data();
 
         renderDashboard(userData);
         loginBtn.style.display = 'none';
