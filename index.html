@@ -169,7 +169,7 @@
 
       try {
         // Exchange code for access token via backend API
-        const response = await fetch(`/functions/discord-oauth.js?code=${code}`);
+        const response = await fetch(`/.netlify/functions/discord-oauth?code=${code}`);
         if (!response.ok) {
           throw new Error('Failed to exchange code for token');
         }
