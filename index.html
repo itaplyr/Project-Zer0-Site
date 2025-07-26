@@ -158,13 +158,15 @@
           throw new Error('Failed to get user info from Discord');
         }
 
-        // Check Firestore for user document with user ID as document ID
-        const userDocRef = doc(db, 'users', userInfo.id);
-        let userDocSnap = await getDoc(userDocRef);
+        // Query Firestore for user document where discordId == userInfo.id
+        const usersCollection = collection(db, 'users');
+        const q = query(usersCollection, where('discordId', '==', userInfo.id));
+        const querySnapshot = await getDocs(q);
         let userData;
-        if (!userDocSnap.exists()) {
-          // Create new user document with user ID as document ID
-          await setDoc(userDocRef, {
+        if (querySnapshot.empty) {
+          // Create new user document with auto-generated ID
+          const newUserDocRef = doc(usersCollection);
+          await setDoc(newUserDocRef, {
             discordId: userInfo.id,
             nickname: userInfo.username,
             referralCode: generateReferralCode(),
@@ -174,9 +176,11 @@
             online: true,
             lastSeen: new Date()
           });
-          userDocSnap = await getDoc(userDocRef);
+          const newUserDocSnap = await getDoc(newUserDocRef);
+          userData = newUserDocSnap.data();
+        } else {
+          userData = querySnapshot.docs[0].data();
         }
-        userData = userDocSnap.data();
 
         renderDashboard(userData);
         loginBtn.style.display = 'none';
