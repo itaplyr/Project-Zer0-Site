@@ -164,7 +164,7 @@
         const scope = encodeURIComponent('identify');
         // Fix redirectUri to include index.html explicitly
         const fixedRedirectUri = window.location.origin + window.location.pathname;
-        const discordAuthUrl = `https://discord.com/api/oauth2/authorize?client_id=${clientId}&redirect_uri=+${encodeURIComponent(fixedRedirectUri)}&response_type=code&scope=${scope}`;
+        const discordAuthUrl = `https://discord.com/api/oauth2/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(fixedRedirectUri)}&response_type=code&scope=${scope}`;
         window.location.href = discordAuthUrl;
         return;
       }
