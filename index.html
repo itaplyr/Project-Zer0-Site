@@ -162,7 +162,9 @@
       if (!code) {
         // Redirect to Discord OAuth2 authorization URL
         const scope = encodeURIComponent('identify');
-        const discordAuthUrl = `https://discord.com/api/oauth2/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${scope}`;
+        // Fix redirectUri to include index.html explicitly
+        const fixedRedirectUri = window.location.origin + window.location.pathname;
+        const discordAuthUrl = `https://discord.com/api/oauth2/authorize?client_id=${clientId}&redirect_uri=+${encodeURIComponent(fixedRedirectUri)}&response_type=code&scope=${scope}`;
         window.location.href = discordAuthUrl;
         return;
       }
@@ -170,6 +172,7 @@
       try {
         // Exchange code for access token via backend API
         const response = await fetch(`/.netlify/functions/discord-oauth?code=${code}`);
+        console.log(response)
         if (!response.ok) {
           throw new Error('Failed to exchange code for token');
         }

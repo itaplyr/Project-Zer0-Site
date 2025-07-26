@@ -2,8 +2,9 @@ import fetch from 'node-fetch';
 
 export async function handler(event, context) {
   const clientId = '1395848486359924756';
-  const clientSecret = "XqENTxEf1EDQGrs56-t-540M6WErd4w_"; // Set this in your environment variables
-  const redirectUri = 'http://localhost:5500/website/index.html'; // Update as needed for production
+  // Use environment variables for client secret and redirect URI
+  const clientSecret = process.env.DISCORD_CLIENT_SECRET || 'XqENTxEf1EDQGrs56-t-540M6WErd4w_';
+  const redirectUri = process.env.REDIRECT_URI || 'https://project-zer0-official.netlify.app/index.html';
 
   const code = event.queryStringParameters.code;
 
@@ -34,6 +35,7 @@ export async function handler(event, context) {
     const tokenData = await tokenResponse.json();
 
     if (!tokenData.access_token) {
+      console.error('Failed to get access token:', tokenData);
       return {
         statusCode: 400,
         body: JSON.stringify({ error: 'Failed to get access token', details: tokenData }),
@@ -50,6 +52,7 @@ export async function handler(event, context) {
     const userData = await userResponse.json();
 
     if (!userData.id) {
+      console.error('Failed to get user info:', userData);
       return {
         statusCode: 400,
         body: JSON.stringify({ error: 'Failed to get user info', details: userData }),
@@ -67,6 +70,7 @@ export async function handler(event, context) {
       }),
     };
   } catch (error) {
+    console.error('Internal server error:', error);
     return {
       statusCode: 500,
       body: JSON.stringify({ error: 'Internal server error', details: error.message }),
