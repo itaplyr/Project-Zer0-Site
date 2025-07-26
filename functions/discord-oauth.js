@@ -4,7 +4,7 @@ export async function handler(event, context) {
   const clientId = '1395848486359924756';
   // Use environment variables for client secret and redirect URI
   const clientSecret = process.env.DISCORD_CLIENT_SECRET || 'XqENTxEf1EDQGrs56-t-540M6WErd4w_';
-  const redirectUri = process.env.REDIRECT_URI || 'https://project-zer0-official.netlify.app/index.html';
+  const redirectUri = process.env.REDIRECT_URI || 'https://project-zer0-official.netlify.app/';
 
   const code = event.queryStringParameters.code;
 
