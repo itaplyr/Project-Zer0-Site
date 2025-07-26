@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Project Zer0 Dashboard</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #121212;
+      color: #e0e0e0;
+    }
+    header {
+      background-color: #1f1f1f;
+      padding: 1rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: #00ff99;
+    }
+    main {
+      max-width: 900px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+    }
+    .login-btn {
+      background-color: #00ff99;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      font-weight: bold;
+      color: #121212;
+      transition: background-color 0.3s ease;
+    }
+    .login-btn:hover {
+      background-color: #00cc77;
+    }
+    .card-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-top: 2rem;
+    }
+    .card {
+      background-color: #23242b;
+      border-radius: 1rem;
+      padding: 1.5rem;
+      flex: 1 1 250px;
+      box-shadow: 0 4px 12px rgba(0, 255, 153, 0.3);
+    }
+    .card h2 {
+      margin-top: 0;
+      color: #00ff99;
+    }
+    .card p {
+      font-size: 1.2rem;
+      margin: 0.5rem 0 0 0;
+    }
+    .error {
+      color: #ff4d4f;
+      margin-top: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Project Zer0 Dashboard</h1>
+    <button id="login-btn" class="login-btn">Login with Discord</button>
+  </header>
+  <main>
+    <div id="content">
+      <p>Please login to view your dashboard.</p>
+    </div>
+  </main>
+
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+    import { getFirestore, doc, getDoc, setDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBgoYtchnONrek50_kJcNlVsN0OPJIBdNo",
+      authDomain: "project-zer0-5827a.firebaseapp.com",
+      projectId: "project-zer0-5827a",
+      storageBucket: "project-zer0-5827a.appspot.com",
+      messagingSenderId: "732821132862",
+      appId: "1:732821132862:web:cbdf51dc9fe8a28099236f"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const clientId = '1395848486359924756'; // Discord app client ID provided by user
+    const redirectUri = window.location.origin + window.location.pathname;
+
+    const loginBtn = document.getElementById('login-btn');
+    const contentDiv = document.getElementById('content');
+
+    function getQueryParam(param) {
+      const urlParams = new URLSearchParams(window.location.search);
+      return urlParams.get(param);
+    }
+
+    async function fetchUserData(userId) {
+      const userDocRef = doc(db, 'users', userId);
+      const userDocSnap = await getDoc(userDocRef);
+      if (userDocSnap.exists()) {
+        return userDocSnap.data();
+      }
+      return null;
+    }
+
+    async function createUserData(userId, username) {
+      const userDocRef = doc(db, 'users', userId);
+      await setDoc(userDocRef, {
+        discordId: userId,
+        nickname: username,
+        referralCode: generateReferralCode(),
+        referralActivated: false,
+        referrals: 0,
+        createdAt: new Date(),
+        online: true,
+        lastSeen: new Date()
+      });
+    }
+
+    function generateReferralCode() {
+      return Math.random().toString(36).substring(2, 8).toUpperCase();
+    }
+
+    function renderDashboard(userData) {
+      contentDiv.innerHTML = `
+        <div class="card-container">
+          <div class="card">
+            <h2>Nickname</h2>
+            <p>${userData.nickname || 'N/A'}</p>
+          </div>
+          <div class="card">
+            <h2>Referral Code</h2>
+            <p>${userData.referralCode || 'N/A'}</p>
+          </div>
+          <div class="card">
+            <h2>Referrals</h2>
+            <p>${userData.referrals || 0}</p>
+          </div>
+          <div class="card">
+            <h2>Referral Activated</h2>
+            <p>${userData.referralActivated ? 'Yes' : 'No'}</p>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderError(message) {
+      contentDiv.innerHTML = `<p class="error">${message}</p>`;
+    }
+
+    async function handleDiscordLogin() {
+      // Check if redirected back with code
+      const code = getQueryParam('code');
+      if (!code) {
+        // Redirect to Discord OAuth2 authorization URL
+        const scope = encodeURIComponent('identify');
+        const discordAuthUrl = `https://discord.com/api/oauth2/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${scope}`;
+        window.location.href = discordAuthUrl;
+        return;
+      }
+
+      try {
+        // Exchange code for access token via backend API
+        const response = await fetch(`/functions/discord-oauth.js?code=${code}`);
+        if (!response.ok) {
+          throw new Error('Failed to exchange code for token');
+        }
+        const userInfo = await response.json();
+
+        if (!userInfo.id) {
+          throw new Error('Failed to get user info from Discord');
+        }
+
+        // Check Firestore for user
+        let userData = await fetchUserData(userInfo.id);
+        if (!userData) {
+          await createUserData(userInfo.id, userInfo.username);
+          userData = await fetchUserData(userInfo.id);
+        }
+
+        renderDashboard(userData);
+        loginBtn.style.display = 'none';
+      } catch (error) {
+        renderError('Failed to login or fetch user data.');
+        console.error(error);
+      }
+    }
+
+    loginBtn.addEventListener('click', () => {
+      handleDiscordLogin();
+    });
+
+    // On page load, check if redirected back with code
+    window.onload = () => {
+      if (getQueryParam('code')) {
+        handleDiscordLogin();
+      }
+    };
+  </script>
+</body>
+</html>

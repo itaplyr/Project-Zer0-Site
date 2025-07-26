@@ -1,0 +1,17 @@
+{
+  "name": "project-zer0-website",
+  "version": "1.0.0",
+  "description": "Project Zer0 website with Netlify functions",
+  "main": "index.html",
+  "scripts": {
+    "build": "echo 'No build step required'",
+    "dev": "netlify dev",
+    "deploy": "netlify deploy --prod"
+  },
+  "devDependencies": {
+    "netlify-cli": "^17.38.1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}

@@ -1,0 +1,17 @@
+[build]
+  functions = "functions"
+  publish = "."
+  command = ""
+
+[functions]
+  directory = "functions"
+
+[dev]
+  functions = "functions"
+  publish = "."
+  port = 8888
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200 
